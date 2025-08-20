@@ -1,7 +1,8 @@
-import os, json
+
+import os, json, time
 from datetime import datetime, timedelta, timezone
 
-import discord, requests
+import aiohttp, discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -20,14 +21,15 @@ score well, while bad behavior should score poorly."
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="?", description=description, intents=intents)
+bot = commands.Bot(command_prefix="!", description=description, intents=intents)
 SCAN_PERIOD = timedelta(hours=24)
 
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
-    print("------")
+    global SESSION
+    SESSION = aiohttp.ClientSession()
+    print(f"Logged in as {bot.user} (ID: {bot.user.id})\n")
 
 
 @bot.command()
@@ -63,16 +65,26 @@ async def allchats(ctx):
             "sort": "latency",
             "data_collection": "deny",
         },
-        "streaming":True,
+        "max_tokens": 100,
     }
-    response = requests.post(
-        url="https://openrouter.ai/api/v1/chat/completions",
-        headers={
+    headers = {
             "Authorization": f"Bearer {os.getenv('OPENROUTER_KEY')}",
-        },
-        data=json.dumps(json_data),
-    )
-    print(response.json())
+            "Content-Type": "application/json"
+        }
+    
+    while True:
+        async with SESSION.post(url="https://openrouter.ai/api/v1/chat/completions", headers=headers, data=json.dumps(json_data)) as response:
+            if response.status == 200:
+                data = await response.json()
+                print(data)
+                break
+            elif response.status == 429:
+                time.sleep(5)
+                continue
+            else:
+                print(f"Error fetching data: {response.status}")
+                break
+
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))
