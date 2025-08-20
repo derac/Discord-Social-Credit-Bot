@@ -32,7 +32,7 @@ async def on_ready():
 
 
 @bot.command()
-async def allchats(ctx):
+async def judge(ctx):
     GUILD_ID = ctx.guild.id
     guild = bot.get_guild(GUILD_ID)
     all_channel_message_log = ""
