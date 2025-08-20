@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 description = """A bot that takes the previous day's messages and puts them into an llm model's context.
 It creates a social credit score for each user and displays that in a table.
-Then, it assigns roles based on the social credit score."""
+Then, it assigns roles based on the social credit score. The numbers should be between -100 and 100."""
 
 SYSTEM_PROMPT = "You are a discord bot which seeks to assign a social credit score to all users in \
 a discord server based on the history of their messages from the past day. Good behavior should \
@@ -50,12 +50,20 @@ async def allchats(ctx):
                     all_users_with_messages.add(message.author)
                 else:
                     break
-    print(all_channel_message_log)
     all_users_with_messages = list(all_users_with_messages)
-    print(all_users_with_messages)
+    #print(all_channel_message_log)
+    #print(all_users_with_messages)
     schema_properties = dict()
     for user in all_users_with_messages:
-        schema_properties[str(user)] = {"type": "number", "description": "A social credit score for this user."}
+        schema_properties[str(user)] = {
+            "type": "object",
+            "required": ["social_credit_score", "reasoning"],
+            "properties": {
+                "social_credit_score": {"type":"number", "description": "A social credit score for this user. A number between -100 and 100", "minimum": -100, "maximum": 100},
+                "reasoning": {"type":"string","description":"Reasoning for giving this user this score."}
+            },
+            "additionalProperties": False,
+        }
     response_format = {
         "type": "json_schema",
         "json_schema": {
@@ -63,8 +71,8 @@ async def allchats(ctx):
             "strict": True,
             "schema": {
                 "type": "object",
-                "properties": schema_properties,
                 "required": [str(user) for user in all_users_with_messages],
+                "properties": schema_properties,
                 "additionalProperties": False,
             },
         },
@@ -101,14 +109,22 @@ async def allchats(ctx):
         ) as response:
             if response.status == 200:
                 data = await response.json()
-                print(data)
+                social_credit_scores = json.loads(data["choices"][0]["message"]["content"])
+                print(social_credit_scores)
+                output = ""
+                for user, data in social_credit_scores.items():
+                    social_credit_score = data["social_credit_score"]
+                    reasoning = data["reasoning"]
+                    output += f"{user} ({social_credit_score})\n{reasoning}\n\n"
+                await ctx.send(output)
                 break
             elif response.status == 429:
-                time.sleep(5)
+                time.sleep(1)
                 continue
             else:
                 print(f"Error fetching data: {response.status}")
                 break
+
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))
