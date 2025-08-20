@@ -6,12 +6,6 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
-SCAN_PERIOD = timedelta(hours=24)
-SYSTEM_PROMPT = "You are a discord bot which seeks to assign a social credit score to all users in \
-a discord server based on the history of their messages from the past day. Good behavior should \
-score well, while bad behavior should score poorly. Provide output as json. When writing reasoning \
-for the score you've given someone, make it concise and matter of fact. Speak like an impersonal \
-robot social credit system that looms over the chat and judges from on high."
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -22,15 +16,20 @@ bot = commands.Bot(command_prefix="!", description=description, intents=intents)
 
 @bot.event
 async def on_ready():
-    await bot.add_cog(SocialCredit(bot))
-    global SESSION
-    SESSION = aiohttp.ClientSession()
     print(f"Logged in as {bot.user} (ID: {bot.user.id})\n")
+    await bot.add_cog(SocialCredit(bot))
 
 
 class SocialCredit(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.SESSION = aiohttp.ClientSession()
+        self.SCAN_PERIOD = timedelta(hours=24)
+        self.SYSTEM_PROMPT = "You are a discord bot which seeks to assign a social credit score to all users in \
+        a discord server based on the history of their messages from the past day. Good behavior should \
+        score well, while bad behavior should score poorly. Provide output as json. When writing reasoning \
+        for the score you've given someone, make it concise and matter of fact. Speak like an impersonal \
+        robot social credit system that looms over the chat and judges from on high."
 
     @commands.command()
     async def judge(self, ctx):
@@ -50,7 +49,7 @@ class SocialCredit(commands.Cog):
                     message_time_difference = (
                         datetime.now(timezone.utc) - message.created_at
                     )
-                    if message_time_difference < SCAN_PERIOD:
+                    if message_time_difference < self.SCAN_PERIOD:
                         all_channel_message_log += f"{message.author.name}: {message.content}\n"
                         all_users_with_messages.add(message.author.name)
                     else:
@@ -87,7 +86,7 @@ class SocialCredit(commands.Cog):
         json_data = {
             "model": "qwen/qwen3-235b-a22b:free",
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.SYSTEM_PROMPT},
                 {"role": "user", "content": all_channel_message_log},
             ],
             "provider": {
@@ -109,7 +108,7 @@ class SocialCredit(commands.Cog):
         }
 
         while True:
-            async with SESSION.post(
+            async with self.SESSION.post(
                 url="https://openrouter.ai/api/v1/chat/completions",
                 headers=headers,
                 data=json.dumps(json_data),
@@ -131,7 +130,7 @@ class SocialCredit(commands.Cog):
                 else:
                     print(f"Error fetching data: {response.status}")
                     break
-            await SESSION.close()
+            await self.SESSION.close()
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))
