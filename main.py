@@ -1,4 +1,3 @@
-
 import os, json, time
 from datetime import datetime, timedelta, timezone
 
@@ -17,7 +16,7 @@ Then, it assigns roles based on the social credit score."""
 
 SYSTEM_PROMPT = "You are a discord bot which seeks to assign a social credit score to all users in \
 a discord server based on the history of their messages from the past day. Good behavior should \
-score well, while bad behavior should score poorly."
+score well, while bad behavior should score poorly. Provide output as json."
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -37,6 +36,7 @@ async def allchats(ctx):
     GUILD_ID = ctx.guild.id
     guild = bot.get_guild(GUILD_ID)
     all_channel_message_log = ""
+    all_users_with_messages = set()
 
     for channel in guild.channels:
         if channel.type == discord.ChannelType.text:
@@ -47,33 +47,58 @@ async def allchats(ctx):
                 )
                 if message_time_difference < SCAN_PERIOD:
                     all_channel_message_log += f"{message.author}: {message.content}\n"
+                    all_users_with_messages.add(message.author)
                 else:
                     break
     print(all_channel_message_log)
+    all_users_with_messages = list(all_users_with_messages)
+    print(all_users_with_messages)
+    schema_properties = dict()
+    for user in all_users_with_messages:
+        schema_properties[str(user)] = {"type": "number", "description": "A social credit score for this user."}
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "Social Credit scores for all users",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": schema_properties,
+                "required": [str(user) for user in all_users_with_messages],
+                "additionalProperties": False,
+            },
+        },
+    }
     json_data = {
         "model": "qwen/qwen3-235b-a22b:free",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": all_channel_message_log},
         ],
-        # "temperature": 0.7,
-        # "top_p": 1,
-        # "frequency_penalty": 0,
-        # "presence_penalty": 0,
         "provider": {
             "allow_fallbacks": True,
             "sort": "latency",
             "data_collection": "deny",
+            "require_parameters": True,
         },
-        "max_tokens": 100,
+        "response_format": response_format,
+        # "temperature": 0.7,
+        # "top_p": 1,
+        # "frequency_penalty": 0,
+        # "presence_penalty": 0,
+        # "max_tokens": 100,
     }
     headers = {
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_KEY')}",
-            "Content-Type": "application/json"
-        }
-    
+        "Authorization": f"Bearer {os.getenv('OPENROUTER_KEY')}",
+        "Content-Type": "application/json",
+    }
+
     while True:
-        async with SESSION.post(url="https://openrouter.ai/api/v1/chat/completions", headers=headers, data=json.dumps(json_data)) as response:
+        async with SESSION.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            data=json.dumps(json_data),
+        ) as response:
             if response.status == 200:
                 data = await response.json()
                 print(data)
@@ -84,7 +109,6 @@ async def allchats(ctx):
             else:
                 print(f"Error fetching data: {response.status}")
                 break
-
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))
