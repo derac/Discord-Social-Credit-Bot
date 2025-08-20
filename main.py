@@ -14,8 +14,8 @@ description = """A bot that takes the previous day's messages and puts them into
 It creates a social credit score for each user and displays that in a table.
 Then, it assigns roles based on the social credit score."""
 
-SYSTEM_PROMPT = "You are a discord bot which seeks to assign a social credit score to all users in\
-a discord server based on the history of their messages from the past day. Good behavior should\
+SYSTEM_PROMPT = "You are a discord bot which seeks to assign a social credit score to all users in \
+a discord server based on the history of their messages from the past day. Good behavior should \
 score well, while bad behavior should score poorly."
 
 intents = discord.Intents.default()
