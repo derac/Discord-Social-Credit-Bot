@@ -11,7 +11,7 @@ class SocialCredit(commands.Cog):
         load_dotenv()
         print(os.getenv("OPENROUTER_KEY"))
         self.bot = bot
-        self.MODEL = "qwen/qwen3-235b-a22b:free"
+        self.MODEL = "openai/gpt-oss-20b:free"#"qwen/qwen3-235b-a22b:free"
         self.SESSION = aiohttp.ClientSession()
         self.SCAN_PERIOD = timedelta(hours=1)
         self.SYSTEM_PROMPT = "You are a discord bot which seeks to assign a social credit score to all users in \
@@ -96,31 +96,20 @@ class SocialCredit(commands.Cog):
                 "sort": "latency",
                 "data_collection": "deny",
                 "require_parameters": True,
+                "max_price": {"prompt": 0, "completion": 0}
             },
             "response_format": response_format,
             # "temperature": 0.7,
             # "top_p": 1,
             # "frequency_penalty": 0,
             # "presence_penalty": 0,
-            # "max_tokens": 100,
+            # "max_tokens": 10,
         }
         headers = {
             "Authorization": f"Bearer {os.getenv('OPENROUTER_KEY')}",
             "Content-Type": "application/json",
         }
 
-        # NOTE: Print your key details
-        # response = await self.SESSION.get(
-        #     url="https://openrouter.ai/api/v1/key",
-        #     headers=headers,
-        # )
-        # json_response = await response.json()
-        # print(json.dumps(json_response, indent=2))
-        print(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers,
-            json.dumps(prompt_config),
-        )
         while True:
             async with self.SESSION.post(
                 url="https://openrouter.ai/api/v1/chat/completions",
@@ -129,6 +118,7 @@ class SocialCredit(commands.Cog):
             ) as response:
                 if response.status == 200:
                     data = await response.json()
+                    print(data)
                     social_credit_scores = json.loads(
                         data["choices"][0]["message"]["content"]
                     )
@@ -141,6 +131,7 @@ class SocialCredit(commands.Cog):
                     await ctx.send(output)
                     break
                 elif response.status == 429:
+                    print("Error {response.status} - Retrying in 1s")
                     time.sleep(1)
                     continue
                 else:
