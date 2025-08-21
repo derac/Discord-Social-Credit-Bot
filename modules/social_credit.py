@@ -7,11 +7,13 @@ from dotenv import load_dotenv
 
 
 class SocialCredit(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, LOGGER):
         load_dotenv()
-        print(os.getenv("OPENROUTER_KEY"))
         self.bot = bot
-        self.MODEL = "openai/gpt-oss-20b:free"#"qwen/qwen3-235b-a22b:free"
+        self.LOGGER = LOGGER
+        # these models have what we need and have the largest context
+        # https://openrouter.ai/models?order=newest&supported_parameters=structured_outputs&max_price=0
+        self.MODELS = ["qwen/qwen3-235b-a22b:free","google/gemma-3-27b-it:free"]#["qwen/qwen3-235b-a22b:free","meta-llama/llama-3.1-405b-instruct:free","google/gemma-3-27b-it:free", ]
         self.SESSION = aiohttp.ClientSession()
         self.SCAN_PERIOD = timedelta(hours=1)
         self.SYSTEM_PROMPT = "You are a discord bot which seeks to assign a social credit score to all users in \
@@ -36,6 +38,7 @@ class SocialCredit(commands.Cog):
             },
             "additionalProperties": False,
         }
+
 
     @commands.command()
     async def judge(self, ctx):
@@ -65,10 +68,9 @@ class SocialCredit(commands.Cog):
                     else:
                         break
         all_users_with_messages = list(all_users_with_messages)
-        print(all_channel_message_log)
-        print(f"Fetched a message log of length {len(all_channel_message_log)}")
-        # print(all_users_with_messages)
-        print(f"{len(all_users_with_messages)} users: {all_users_with_messages}")
+        #self.LOGGER.debug(all_channel_message_log)
+        self.LOGGER.debug(f"Fetched a message log of length {len(all_channel_message_log)}")
+        self.LOGGER.debug(f"{len(all_users_with_messages)} users: {all_users_with_messages}")
         schema_properties = dict()
         for user in all_users_with_messages:
             schema_properties[str(user)] = self.USER_SCHEMA
@@ -86,12 +88,13 @@ class SocialCredit(commands.Cog):
             },
         }
         prompt_config = {
-            "model": self.MODEL,
+            "models": self.MODELS,
             "messages": [
                 {"role": "system", "content": self.SYSTEM_PROMPT},
                 {"role": "user", "content": all_channel_message_log},
             ],
             "provider": {
+                "order": ["venice/fp8", "google-ai-studio"],
                 "allow_fallbacks": True,
                 "sort": "latency",
                 "data_collection": "deny",
@@ -118,11 +121,11 @@ class SocialCredit(commands.Cog):
             ) as response:
                 if response.status == 200:
                     data = await response.json()
-                    print(data)
+                    self.LOGGER.debug(data)
                     social_credit_scores = json.loads(
                         data["choices"][0]["message"]["content"]
                     )
-                    print(social_credit_scores)
+                    self.LOGGER.debug(social_credit_scores)
                     output = ""
                     for user, data in social_credit_scores.items():
                         social_credit_score = data["social_credit_score"]
@@ -131,10 +134,10 @@ class SocialCredit(commands.Cog):
                     await ctx.send(output)
                     break
                 elif response.status == 429:
-                    print("Error {response.status} - Retrying in 1s")
+                    self.LOGGER.debug(f"Error {response.status} - Retrying in 1s")
                     time.sleep(1)
                     continue
                 else:
-                    print(f"Error fetching data: {response.status} - {response}")
+                    self.LOGGER.debug(f"Error fetching data: {response.status} - {response}")
                     break
             await self.SESSION.close()

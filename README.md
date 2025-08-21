@@ -1,0 +1,15 @@
+#  TODO
+- Add group setup
+    - we will have two groups:
+        - good can access all chats, bad can only access bad chat
+    - two text chats and two voice chats
+        - good text/good voice and bad text/bad voice
+        - otherwise doesn't effect the rest of the server
+    - Add setting groups based on score
+        - positive score = you're good,  negative score = you're bad
+- every x time period (adjustable) have social credit bot judge the server
+    - the bot will give the user a value between -100 and 100 to add to their social credit score
+    - everyone's scores will be saved and updated (in a json blob for now)
+        - along with a text blurb about the user and their history
+        - let the bot know this is the only place he can store history about the user
+- Move config to a file (for example, the time period to search)
