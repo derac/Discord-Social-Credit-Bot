@@ -21,3 +21,4 @@
         - let the bot know this is the only place he can store history about the user
 - Move config to a file (for example, the time period to search)
 - Add a field to the data retrieved for each user which provides a short nickname that the user will be assigned.
+- Need to implement some checks on the prompt length to make sure we're not sending an invalid request (openrouter will return a 400 Bad Request)

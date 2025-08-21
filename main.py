@@ -27,6 +27,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 # needed to check roles
 intents.guilds = True
+# needed to get user objects to set roles and such
+intents.members = True
 description = """A bot that takes the previous day's messages and puts them into an llm model's context.
 It creates a social credit score for each user and displays that in a table.
 Then, it assigns roles based on the social credit score. The numbers should be between -100 and 100."""
