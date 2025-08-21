@@ -2,6 +2,7 @@
 - Add group setup
     - we will have two groups:
         - good can access all chats, bad can only access bad chat
+        - there is soooo much more you can do here like giving good people the ability to manage nicknames or maybe move bad people around in vc
     - two text chats and two voice chats
         - good text/good voice and bad text/bad voice
         - otherwise doesn't effect the rest of the server
@@ -13,3 +14,4 @@
         - along with a text blurb about the user and their history
         - let the bot know this is the only place he can store history about the user
 - Move config to a file (for example, the time period to search)
+- Add a field to the data retrieved for each user which provides a short nickname that the user will be assigned.

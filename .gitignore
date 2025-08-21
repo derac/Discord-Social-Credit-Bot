@@ -2,4 +2,4 @@
 .env
 .vscode
 __pycache__
-discord.log
+discord.log*

@@ -46,13 +46,11 @@ class SocialCredit(commands.Cog):
         if ctx.author.id != AUTHORIZED_USER_ID:
             await ctx.send("You are not authorized to use this command.")
             return
-        GUILD_ID = ctx.guild.id
-        guild = self.bot.get_guild(GUILD_ID)
         all_channel_message_log = ""
         all_users_with_messages = set()
 
-        for channel in guild.channels:
-            if channel.type == discord.ChannelType.text:
+        for channel in ctx.guild.text_channels:
+            if channel.name in ["bad-people","good-people"]:
                 all_channel_message_log += (
                     f"\n# Channel - {channel.name.capitalize()}\n"
                 )
@@ -141,3 +139,40 @@ class SocialCredit(commands.Cog):
                     self.LOGGER.debug(f"Error fetching data: {response.status} - {response}")
                     break
             await self.SESSION.close()
+
+    @commands.command()
+    async def setup(self, ctx):
+        guild = ctx.guild
+        for role in ["Bad person","Good person"]:
+            if not discord.utils.get(guild.roles, name=role):
+                try:
+                    await guild.create_role(name=role, reason="Role created by bot as it didn't exist.")
+                    await ctx.send(f"Role '{role}' created successfully.")
+                except discord.Forbidden:
+                    await ctx.send("I don't have permission to create roles.")
+                except Exception as e:
+                    await ctx.send(f"An error occurred while creating the role: {e}")
+            else:
+                await ctx.send(f"The role {role} already exists.")
+        category = "Social Credit Simulator"
+        if not discord.utils.get(guild.categories, name=category):
+            try:
+                await guild.create_category(category)
+                await ctx.send(f"Category '{category}' created successfully.")
+            except discord.Forbidden:
+                await ctx.send("I don't have permission to create categories.")
+            except Exception as e:
+                await ctx.send(f"An error occurred while creating the category: {e}")
+        else:
+            await ctx.send(f"The category {category} already exists.")
+        for channel in ["bad-people","good-people"]:
+            if not discord.utils.get(guild.text_channels, name=channel):
+                try:
+                    await guild.create_text_channel(channel, category=discord.utils.get(guild.categories, name=category))
+                    await ctx.send(f"Channel '{channel}' created successfully.")
+                except discord.Forbidden:
+                    await ctx.send("I don't have permission to create channels.")
+                except Exception as e:
+                    await ctx.send(f"An error occurred while creating the channel: {e}")
+            else:
+                await ctx.send(f"The channel {channel} already exists.")
