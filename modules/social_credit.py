@@ -217,9 +217,6 @@ person chat."
             file.write(json.dumps(self.USER_DATA, indent=4))
         await ctx.send(output)
 
-    
-    @commands.command()
-    async def test(self, ctx):
         bad_role = discord.utils.get(ctx.guild.roles, name="Bad person")
         good_role = discord.utils.get(ctx.guild.roles, name="Good person")
         for user, data in self.USER_DATA.items():
